@@ -1,0 +1,74 @@
+Description: >
+ Carlos Rivas / Udacity
+Parameters:
+ EnvironmentName:
+     Description: An environment name that will be prefixed to resource names
+     Type: String
+
+Resources:
+  RoleForSSMAccess:
+    Type: AWS::IAM::InstanceProfile
+    Properties: 
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+
+# Instance Profile
+  ServerInstanceProfile: 
+    Type: "AWS::IAM::InstanceProfile"
+    Properties: 
+      Roles: 
+        - !Ref RoleForSSMAccess
+
+#Security Group
+  myWebAccessSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+        GroupDescription: Allow http to our test host          
+        SecurityGroupIngress:
+          - IpProtocol: tcp  
+            FromPort: 80
+            ToPort: 80
+            CidrIp: 0.0.0.0/0    
+        SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+        VpcId:
+          Fn::ImportValue:
+          !Sub "${EnvironmentName}-VPCID"  
+        
+
+#EC2 Instance 
+  myWebServerInstance: 
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t3.micro
+      ImageId: !Ref AMIID
+      IamInstanceProfile: !Ref ServerInstanceProfile
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "false"
+          DeviceIndex: "0"
+          GroupSet: 
+            - Ref: "myWebAccessSecurityGroup"
+          SubnetId: 
+            Fn::ImportValue:
+            !Sub "${EnvironmentName}-PRIV-NETS"
+            
+
+
+
+
+
+
+
+
